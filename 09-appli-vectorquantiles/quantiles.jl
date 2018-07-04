@@ -69,14 +69,6 @@ println("################")
 
 # Vector Quantile Regression
 
-nu	= fill(1/n,n)
-step = 0.1
-U = round.(collect(linspace(0, 1, 11)), 1)
-m = length(U)
-mu = fill(1/m, m)
-d = 1
-n = 235
-
 function VQRTp(X, Y, U, mu, nu)
     n = size(Y)[1]
     d = 1
@@ -133,19 +125,33 @@ function VQRTp(X, Y, U, mu, nu)
   println(ψ)
   println(val)
 
+  return Dict("π" => π, "ψ" => ψ, "b" => b, "val" => val)
+
 end
 
 function ComputeBeta1D(mu, b)
     m = size(mu)[1]
     D = diagm(fill(1, m)) + diagm(fill(-1, m-1), -1)
-    for i in 1:(m-1)
-        D[i+1, i] = -1
+    beta = diagm(1./mu) * D * b
+    return beta
+end
 
+# Application
 
-ComputeBeta1D <- function( mu,b){
-  m <-dim(mu)[1]
-  D <-diag(fill(1, m));
-  for (i in 1:(m-1)) {D[i+1,i] <- (-1)}
-  beta<-diag(c(1/mu))%*% D %*% b
-  return(beta)
-}
+nu	= fill(1/n,n)
+step = 0.1
+U = round.(collect(linspace(0, 1, 11)), 1)
+m = length(U)
+mu = fill(1/m, m)
+d = 1
+
+sols = VQRTp(X, Y, U, mu, nu)
+
+π = sols["π"]
+val = sols["val"]
+ψ = sols["ψ"]
+b = sols["b"]
+
+betasVQR = ComputeBeta1D(mu, b)
+
+thebetaVQR = betasVQR[6,:]
