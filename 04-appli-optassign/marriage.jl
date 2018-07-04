@@ -32,7 +32,7 @@ mY = mapslices(mean, Yvals, 1)
 Xvals_σ = (Xvals .- mX) ./ sdX
 Yvals_σ = (Yvals .- mY) ./ sdY
 
-nobs = size(Xvals)[1]
+nobs = size(Xvals_σ)[1]
 
 Phi = Xvals_σ * A * Yvals_σ'
 
@@ -54,10 +54,11 @@ d = vcat(p, q)
 # Solving the model
 
 m = Model(solver=GurobiSolver(Presolve=0))
-@variable(m, x[1:size(c)[1]])
-@objective(m, Max, c'*x)
-@constraint(m, x*B' .== d)
-@constraint(m, x .>= 0.0)
+@variable(m, x[1:N, 1:M])
+@objective(m, Max, x'*Phi)
+@objective(m, x .> 0)
+@constraint(m, x*fill(1, M) = p)
+@constraint(m, fill(1, N)'*x = q')
 status = solve(m)
 
 if status == :Optimal
@@ -66,10 +67,18 @@ else
     warn("Optimization problem with Gurobi. status = $status")
 
 
-cost = getvalue(x)
-total_distance = getobjectivevalue(m)
+pi = getvalue(x)
+val = getobjectivevalue(m)
 
 
+
+println("Value of the problem (Gurobi) = $total_distance")
+println()
+println()
+
+print(paste0("Value of the problem (Gurobi) =",val))
+print(u[1:10])
+print(v[1:10])
 
 result   = gurobi ( list(A=A,obj=c,modelsense="max",rhs=d,sense="="), params=list(OutputFlag=0) )
 if (result$status=="OPTIMAL") {

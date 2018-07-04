@@ -4,12 +4,12 @@
 using CSV, Gurobi, JuMP
 
 syntheticData = true
-doGurobi = false
-doIPFP1 = true
+doGurobi = true
+doIPFP1 = false
 doIPFP2 = true
 
 tol=1e-9
-maxiter = 100
+maxiter = 1000000
 sigma = 0.1 #0.001 # note: 0.1 to 0.001
 
 
@@ -138,7 +138,7 @@ end
 
 # computation of the  regularized problem with the  IPFP 1(bis)
 
-if true
+if false
   @time begin
     iter = 0
     cont = true
