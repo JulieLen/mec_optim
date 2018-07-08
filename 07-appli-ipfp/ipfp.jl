@@ -3,9 +3,9 @@
 
 using CSV, Gurobi, JuMP
 
-syntheticData = true
-doGurobi = true
-doIPFP1 = false
+syntheticData = false
+doGurobi = false
+doIPFP1 = true
 doIPFP2 = true
 
 tol=1e-9

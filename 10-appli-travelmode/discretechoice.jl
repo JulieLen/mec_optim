@@ -7,9 +7,11 @@
 
 =#
 
-# Packages use
+Pkg.add("JuMP")
 
-using CSV, DataFrames
+# Packages used
+
+using CSV, DataFrames, JuMP
 
 # Data shaping
 
