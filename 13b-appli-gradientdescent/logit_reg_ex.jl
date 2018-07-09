@@ -36,8 +36,7 @@ for i in 1:n_samp
     push!(y, rand(Binomial(1, μ[i])))
 end
 
-
-function fn(θ, y, X)
+function F(θ)
 
     μ = sigm( X * θ)
     val = y .* log.(μ) + (1-y) .* log.(1 - μ)
@@ -46,19 +45,25 @@ function fn(θ, y, X)
 
 end
 
-function grr(θ, y, X)
-    μ = sigm( X * θ)
 
-    return X' * (μ - y)
+function Grad!(A, θ)
+    μ = sigm( X * θ)
+    A[1:5] = X' * (μ - y)
 end
 
-x0 = ones(n_dim)
 
-optimize(b -> fn(b, y, X), x0, BFGS())
+x0 = fill(1.0, n_dim)
+
+# without gradient : optimize(b -> fn(b, y, X), x0, BFGS())
+
+sol = optimize(F, Grad!, x0, BFGS())
 
 
-
-
+println("#### Solution #######")
+println()
+println(sol)
+println()
+println()
 
 # Testing that the result is the same in R and Julia
 
@@ -84,8 +89,7 @@ y_R = rcopy(reval("a[[2]]"))
 
 opt = optimize(b -> fn(b, y_R, x_R), ones(n_dim), BFGS())
 
-println("###################")
-println("Testing R-Julia matching")
+println("#### Testing R-Julia matching #######")
 println()
 println("Value of the minimum - R result= 232.3052")
 println()
