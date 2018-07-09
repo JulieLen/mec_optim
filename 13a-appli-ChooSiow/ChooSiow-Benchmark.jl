@@ -11,8 +11,9 @@
 
 # Pkg.add("RData")
 # Pkg.add("NLopt")
+# Pkg.add("SpecialFunctions")
 
-using Gurobi, RData, NLopt
+using Gurobi, RData, NLopt, SpecialFunctions
 
 
 path = pwd()
@@ -160,32 +161,45 @@ end
 
 # simulatedLinprogr
 
-function simulatedLinprogr(Phi, n, m, nbDraws = 1e3)
+function simulatedLinprogr(Phi, n, m, nbDraws = Int(1e3))
 nbX = length(n)
 nbY = length(m)
-nbI = Int(nbX * nbDraws)
-nbJ = Int(nbY * nbDraws)
+nbI = nbX * nbDraws
+nbJ = nbY * nbDraws
 
-ϵ_iy = reshape( digamma(1) - log(-log(rand(nbI*nbJ))), (nbI,nbY))
+ϵ_iy = reshape( digamma(1) - log.(-log.(rand(nbI*nbY))), (nbI,nbY))
 ϵ0_i = vec(digamma(1) - log.(-log.(rand(nbI))))
 
 I_ix = fill(0, (nbI, nbX))
 for x in 1:nbX
-    I_ix[(nbDraws * (x-1) + 1):(nbDraws * x), x] = 1
+    I_ix[Int(nbDraws * (x-1) + 1):Int(nbDraws * x), x] = 1
 end
 
-η_xj = reshape( digamma(1) - log.(-log.(rand(nbX*nbJ))), (nbX,nbY))
+η_xj = reshape( digamma(1) - log.(-log.(rand(nbX*nbJ))), (nbX,nbJ))
 η0_i = vec(digamma(1) - log.(-log.(rand(nbI))))
 
 I_yj = fill(0, (nbY, nbJ))
 for y in 1:nbY
-    I_yj[y,(nbDraws * (y-1) + 1):(nbDraws * y)] = 1
+    I_yj[y,Int(nbDraws * (y-1) + 1):Int(nbDraws * y)] = 1
 end
 
-ni = c(I_ix * n) / nbDraws
-mj = c(m * I_yj) / nbDraws
+ni = vec(I_ix * n) / nbDraws
+mj = vec(m' * I_yj) / nbDraws
 
-A11 = kron(fill(1, nbY), sparse(1:nbI, 1:nbI, 1))
+@time begin
+    kron(fill(1, nbY), sparse(1:nbI, 1:nbI, 1))
+end
+
+@time begin
+    kron(fill(1, nbY), sparse(1:nbI, 1:nbI, true))
+end
+
+@time begin
+    kron(fill(true, nbY), sparse(1:nbI, 1:nbI, true))
+end
+
+
+A11 = kron(fill(1, nbY), sparse(1:nbI, 1:nbI, true))
 A12 = sparse(1:nbI*nbY, 1:nbJ, 0)
 A13 = kron(sparse(1:nbY, 1:nbY, -1), I_ix)
 
@@ -199,40 +213,34 @@ A2 = vcat(A11, A12, A13)
 
 A = hcat(A1, A2)
 
-nbconstr = dim(A)[1]
+lb = vcat(ϵ0_i, η0_j, fill(-Inf, nbX*nbY))
+rhs = vcat(ϵ_iy, eta_xj + Phi % Y_yj)
+obj = vcat[ni, mj, fill(0, nbX*nbY)]
 
 
-A    = rbind(A_1,A_2)
-  #
-  nbconstr = dim(A)[1]
-  nbvar = dim(A)[2]
-  #
-  lb  = c(epsilon0_i,t(eta0_j), rep(-Inf,nbX*nbY))
-  rhs = c(epsilon_iy, eta_xj+Phi %*% I_yj)
-  obj = c(ni,mj,rep(0,nbX*nbY))
-  sense = rep(">=",nbconstr)
-  modelsense = "min"
-  #
-  result = gurobi(list(obj=obj,A=A,modelsense=modelsense,rhs=rhs,sense=sense,lb=lb),params=list(OutputFlag=0))
-  #
-  muiy = matrix(result$pi[1:(nbI*nbY)],nrow=nbI)
-  mu = t(I_ix) %*% muiy
-  val = sum(ni*result$x[1:nbI]) + sum(mj*result$x[(nbI+1):(nbI+nbJ)])
+sol = linprog(obj, A, '=', rhs, lb, GurobiSolver(Presolve=0))
 
+muiy =
+mu = I_ix' * muiy
+
+val = sum()
+
+muiy = matrix(result$pi[1:(nbI*nbY)],nrow=nbI)
+mu = t(I_ix) %*% muiy
+val = sum(ni*result$x[1:nbI]) + sum(mj*result$x[(nbI+1):(nbI+nbJ)])
+
+mux0 = n - sum(mu, 2)
+mu0y = m - sum(mu, 1)'
+
+return Dict("mu" => mu, "mux0" => mux0, "mu0y" => mu0y, "val" => val, iter = Nullable(1)))
+
+
+
+mux0 = n - apply(mu,1,sum)
+mu0y = m - apply(mu,2,sum)
+return(list(mu = mu, mux0 = mux0, mu0y = mu0y, val = val, iter = NA))
 
 
 
 
     #
-    # based on this, can compute aggregated equilibrium in LP
-    #
-    A_11 = suppressMessages( Matrix::kronecker(matrix(1,nbY,1),sparseMatrix(1:nbI,1:nbI,x=1)) )
-    A_12 = sparseMatrix(i=NULL,j=NULL,dims=c(nbI*nbY,nbJ),x=0)
-    A_13 = suppressMessages( Matrix::kronecker(sparseMatrix(1:nbY,1:nbY,x=-1),I_ix) )
-
-    A_21 = sparseMatrix(i=NULL,j=NULL,dims=c(nbX*nbJ,nbI),x=0)
-    A_22 = suppressMessages( Matrix::kronecker(sparseMatrix(1:nbJ,1:nbJ,x=1),matrix(1,nbX,1)) )
-    A_23 = suppressMessages( Matrix::kronecker(t(I_yj),sparseMatrix(1:nbX,1:nbX,x=1)) )
-
-    A_1  = cbind(A_11,A_12,A_13)
-    A_2  = cbind(A_21,A_22,A_23)
