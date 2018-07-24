@@ -75,7 +75,7 @@ for busType in 1:length(fileArr)
   tmpdata = reshape(Array(tmpdata), (nbRows, nbCols))
 
   println("Group = $busType")
-  println("Nb at leat one = $(length(find(tmpdata[6,:] .!= 0)))")
+  println("Nb at least one = $(length(find(tmpdata[6,:] .!= 0)))")
   println("Nb no repl = $(length(find(tmpdata[6,:] .== 0)))")
 
   for busId in 1:nbCols
@@ -94,8 +94,8 @@ for busType in 1:length(fileArr)
 
       odoReadings = tmpdata[12:nbRows,busId]
 
-      wasreplacedonce = ifelse((tmpdata[12:nbRows,busId] .>= odo1stRep) .& (odo1stRep.>0) , 1, 0)
-      wasreplacedtwice = ifelse((tmpdata[12:nbRows,busId] .>= odo2ndRep) .& (odo2ndRep.>0) , 1, 0)
+      wasreplacedonce = ifelse.((tmpdata[12:nbRows,busId] .>= odo1stRep) .& (odo1stRep.>0) , 1, 0)
+      wasreplacedtwice = ifelse.((tmpdata[12:nbRows,busId] .>= odo2ndRep) .& (odo2ndRep.>0) , 1, 0)
       howmanytimesreplaced = wasreplacedonce + wasreplacedtwice
 
       correctedmileage = tmpdata[12:nbRows,busId] + howmanytimesreplaced .* (howmanytimesreplaced-2) .* odo1stRep - 0.5 * howmanytimesreplaced .* (howmanytimesreplaced-1) .* odo1stRep

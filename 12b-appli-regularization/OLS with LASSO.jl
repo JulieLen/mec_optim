@@ -31,10 +31,16 @@ scatter(y, m=(0.5, [:cross], 2), legend=:none)
 
 FIT = glmnet(x, y, alpha = 1, intercept = false)
 
+println(FIT)
+println()
+
 # plot(FIT)
 
 
 cvfit = glmnetcv(x, y, alpha = 1, intercept = false)
+
+println(cvfit)
+println()
 
 # cvfit.lambda
 

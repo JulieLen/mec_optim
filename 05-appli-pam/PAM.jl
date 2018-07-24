@@ -42,6 +42,8 @@ function dΦ_dy(x, y)
     x
 end
 
+# Model solutions
+
 function Tx(x)
     quant_Q(cdf_P(x))
 end

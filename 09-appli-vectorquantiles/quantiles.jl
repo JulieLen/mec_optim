@@ -45,15 +45,21 @@ ResultQR = qreg(@formula(food_expenditure ~ total_income), data, t)
 X = [fill(1, nrow(data)) X0]
 k = ncol(data)
 
-obj = vcat( fill(t, n), fill(1-t, n), fill(0, k) )
+aba = vec(vcat( fill(t, n), fill(1-t, n), fill(0, k) ))
 A = hcat(sparse(1:n,1:n,1), - sparse(1:n, 1:n, 1), X)
 rhs = Y
 lb = vcat(fill(0, 2*n), fill(-Inf, k))
 ub = Inf
 
-sol = linprog(obj, A, '=', rhs, lb, ub, GurobiSolver(Presolve=0))
+mv = Model(solver = GurobiSolver(Presolve=0))
+@variable(m, x[1:472] >= 0)
+@objective(m, Min, aba' * x)
+@constraint(m, A*x .== rhs)
+status = solve(m)
 
-beta = sol.sol[2*n+1:2*n+k]
+sol = getvalue(x)
+
+beta = sol[2*n+1:2*n+k]
 
 println("################")
 println()
